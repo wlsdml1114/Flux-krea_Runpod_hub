@@ -1,0 +1,18 @@
+{
+    "title": "Flux Krea",
+    "description": "Flux 모델을 사용한 이미지 생성 및 편집을 위한 RunPod Hub",
+    "type": "serverless",
+    "category": "image",
+    "iconUrl": "https://example.com/icon.png",
+  
+    "config": {
+      "runsOn": "GPU",
+      "containerDiskInGb": 200,
+  
+      "gpuCount": 1,
+      "gpuIds": "ADA_24",
+      "allowedCudaVersions": [
+        "12.9", "12.8"
+      ]
+    }
+}
