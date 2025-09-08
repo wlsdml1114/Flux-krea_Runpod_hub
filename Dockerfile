@@ -26,7 +26,7 @@ RUN wget https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged/resolve/ma
 
 
 COPY . .
-COPY extra_model_path.json /ComfyUI/extra_model_path.json
+COPY extra_model_paths.json /ComfyUI/extra_model_paths.json
 RUN chmod +x /entrypoint.sh
 
 CMD ["/entrypoint.sh"]
