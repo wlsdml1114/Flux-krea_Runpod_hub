@@ -2,7 +2,7 @@
 
 이 프로젝트는 RunPod Serverless 환경에서 [Flux Krea](https://bfl.ai/blog/flux-1-krea-dev)를 쉽게 배포하고 사용할 수 있도록 설계된 템플릿입니다.
 
-[![Runpod](https://api.runpod.io/badge/wlsdml1114/flux_krea_Runpod_hub)](https://console.runpod.io/hub/wlsdml1114/flux_krea_Runpod_hub)
+[![Runpod](https://api.runpod.io/badge/wlsdml1114/Flux-krea_Runpod_hub)](https://console.runpod.io/hub/wlsdml1114/Flux-krea_Runpod_hub)
 
 Flux Krea는 Flux 아키텍처를 사용하여 고품질 이미지를 생성하는 고급 AI 모델로, 여러 LoRA(Low-Rank Adaptation) 모델을 지원합니다.
 
