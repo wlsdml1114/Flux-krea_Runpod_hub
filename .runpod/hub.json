@@ -7,7 +7,7 @@
   
     "config": {
       "runsOn": "GPU",
-      "containerDiskInGb": 200,
+      "containerDiskInGb": 30,
   
       "gpuCount": 1,
       "gpuIds": "ADA_24",
