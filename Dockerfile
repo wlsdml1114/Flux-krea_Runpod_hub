@@ -19,9 +19,10 @@ RUN cd /ComfyUI/custom_nodes && \
     cd ComfyUI-Manager && \
     pip install -r requirements.txt
 
-RUN hf download Comfy-Org/flux1-krea-dev_ComfyUI split_files/diffusion_models/flux1-dev-krea_fp8_scaled.safetensors --local-dir /ComfyUI/models/unet/
-RUN hf download comfyanonymous/flux_text_encoders clip_l.safetensors --local-dir=/ComfyUI/models/clip/
-RUN hf download comfyanonymous/flux_text_encoders t5xxl_fp8_e4m3fn_scaled.safetensors --local-dir=/ComfyUI/models/clip/
+# wget을 사용하여 모델 다운로드 (인증 불필요)
+RUN wget https://huggingface.co/Comfy-Org/flux1-krea-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-dev-krea_fp8_scaled.safetensors -O /ComfyUI/models/unet/flux1-dev-krea_fp8_scaled.safetensors
+RUN wget https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors -O /ComfyUI/models/clip/clip_l.safetensors
+RUN wget https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn_scaled.safetensors -O /ComfyUI/models/clip/t5xxl_fp8_e4m3fn_scaled.safetensors
 RUN wget https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged/resolve/main/split_files/vae/ae.safetensors -O /ComfyUI/models/vae/ae.safetensors
 
 
