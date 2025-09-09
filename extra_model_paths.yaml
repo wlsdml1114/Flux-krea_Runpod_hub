@@ -2,7 +2,7 @@
 #your base path should be either an existing comfy install or a central folder where you store all of your models, loras, etc.
 
 comfyui:
-    base_path: /workspace/ComfyUI/
+    base_path: /ComfyUI/
     # You can use is_default to mark that these folders should be listed first, and used as the default dirs for eg downloads
     is_default: true
     checkpoints: models/checkpoints/
