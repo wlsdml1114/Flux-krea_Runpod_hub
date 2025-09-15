@@ -20,7 +20,7 @@ RUN cd /ComfyUI/custom_nodes && \
     pip install -r requirements.txt
 
 # wget을 사용하여 모델 다운로드 (인증 불필요)
-RUN wget https://huggingface.co/Comfy-Org/FLUX.1-Krea-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-krea-dev_fp8_scaled.safetensors -O /ComfyUI/models/unet/flux1-dev-krea_fp8_scaled.safetensors
+RUN wget https://huggingface.co/Comfy-Org/FLUX.1-Krea-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-krea-dev_fp8_scaled.safetensors -O /ComfyUI/models/unet/flux1-krea-dev_fp8_scaled.safetensors
 RUN wget https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors -O /ComfyUI/models/clip/clip_l.safetensors
 RUN wget https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn_scaled.safetensors -O /ComfyUI/models/clip/t5xxl_fp8_e4m3fn_scaled.safetensors
 RUN wget https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged/resolve/main/split_files/vae/ae.safetensors -O /ComfyUI/models/vae/ae.safetensors
