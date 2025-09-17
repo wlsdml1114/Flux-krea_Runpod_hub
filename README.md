@@ -3,7 +3,7 @@
 
 This project is a template designed to easily deploy and use [Flux Krea](https://bfl.ai/blog/flux-1-krea-dev) in the RunPod Serverless environment.
 
-[Flux Krea serverless template](https://console.runpod.io/deploy?template=c8qsjsrwcw&ref=wvzldlmr)
+[![Runpod](https://api.runpod.io/badge/wlsdml1114/Flux-krea_Runpod_hub)](https://console.runpod.io/hub/wlsdml1114/Flux-krea_Runpod_hub)
 
 Flux Krea is an advanced AI model that generates high-quality images with creative text-to-image capabilities using the Flux architecture, with support for multiple LoRA (Low-Rank Adaptation) models.
 

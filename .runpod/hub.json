@@ -3,7 +3,7 @@
     "description": "Flux 모델을 사용한 이미지 생성 및 편집을 위한 RunPod Hub",
     "type": "serverless",
     "category": "image",
-    "iconUrl": "https://example.com/icon.png",
+    "iconUrl": "https://github.com/wlsdml1114/Engui_Studio/blob/main/assets/logo.png?raw=true",
   
     "config": {
       "runsOn": "GPU",
