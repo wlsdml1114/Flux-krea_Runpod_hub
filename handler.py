@@ -9,6 +9,7 @@ import logging
 import urllib.request
 import urllib.parse
 import binascii # Base64 에러 처리를 위해 import
+import time
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,7 +92,6 @@ def get_images(ws, prompt):
                 image_data = get_image(image['filename'], image['subfolder'], image['type'])
                 # bytes 객체를 base64로 인코딩하여 JSON 직렬화 가능하게 변환
                 if isinstance(image_data, bytes):
-                    import base64
                     image_data = base64.b64encode(image_data).decode('utf-8')
                 images_output.append(image_data)
         output_images[node_id] = images_output
@@ -107,18 +107,18 @@ def inject_image_to_workflow(prompt, init_image_path):
     Inject init_image into workflow for image-to-image generation.
     Modifies workflow to use input image as initial latent instead of empty latent.
     
-    Workflow structure (based on Flux Krea):
-    - Node "27": EmptySD3LatentImage (to be replaced with encoded image)
-    - Node "31": KSampler (needs latent_image input from node 27)
-    - Node "39": VAELoader (provides VAE for encoding/decoding)
-    - Node "38": UNETLoader (provides model)
+    This function dynamically searches for nodes by their class_type:
+    - Finds KSampler node (needs latent_image input)
+    - Finds VAELoader node (provides VAE for encoding/decoding)
+    - Finds EmptySD3LatentImage or EmptyLatentImage node (to be replaced)
     
     Strategy:
-    1. Create LoadImage node to load init_image
-    2. Create VAEEncode node to encode image to latent
-    3. Connect LoadImage -> VAEEncode -> KSampler (replacing EmptySD3LatentImage connection)
+    1. Dynamically locate required nodes by class_type
+    2. Create LoadImage node to load init_image
+    3. Create VAEEncode node to encode image to latent
+    4. Connect LoadImage -> VAEEncode -> KSampler (replacing EmptyLatentImage connection)
     """
-    logger.info(f"🖼️ Injecting init_image into workflow: {init_image_path}")
+    logger.info(f"Injecting init_image into workflow: {init_image_path}")
     
     # Find key nodes by class_type
     ksampler_node_id = None
@@ -140,11 +140,11 @@ def inject_image_to_workflow(prompt, init_image_path):
             empty_latent_node_id = node_id
     
     if not ksampler_node_id:
-        logger.error("❌ KSampler node not found - cannot inject image")
+        logger.error("KSampler node not found - cannot inject image")
         return prompt
     
     if not vae_loader_node_id:
-        logger.error("❌ VAELoader node not found - cannot encode image")
+        logger.error("VAELoader node not found - cannot encode image")
         return prompt
     
     # Generate unique node IDs for new nodes
@@ -192,10 +192,12 @@ def handler(job):
     init_image_path = None
     if "init_image" in job_input:
         temp_dir = "/tmp"
+        # Use unique filename to avoid race conditions in concurrent jobs
+        unique_filename = f"init_image_{uuid.uuid4().hex[:8]}.png"
         init_image_path = save_data_if_base64(
             job_input["init_image"], 
             temp_dir, 
-            "init_image.png"
+            unique_filename
         )
         logger.info(f"✅ Saved init_image to: {init_image_path}")
         if not os.path.exists(init_image_path):
@@ -287,7 +289,6 @@ def handler(job):
     # 웹소켓 연결 시도 (최대 3분)
     max_attempts = int(180/5)  # 3분 (1초에 한 번씩 시도)
     for attempt in range(max_attempts):
-        import time
         try:
             ws.connect(ws_url)
             logger.info(f"웹소켓 연결 성공 (시도 {attempt+1})")
