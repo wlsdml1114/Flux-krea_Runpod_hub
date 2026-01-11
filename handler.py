@@ -9,6 +9,7 @@ import logging
 import urllib.request
 import urllib.parse
 import binascii # Base64 에러 처리를 위해 import
+import time
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,7 +92,6 @@ def get_images(ws, prompt):
                 image_data = get_image(image['filename'], image['subfolder'], image['type'])
                 # bytes 객체를 base64로 인코딩하여 JSON 직렬화 가능하게 변환
                 if isinstance(image_data, bytes):
-                    import base64
                     image_data = base64.b64encode(image_data).decode('utf-8')
                 images_output.append(image_data)
         output_images[node_id] = images_output
@@ -102,10 +102,109 @@ def load_workflow(workflow_path):
     with open(workflow_path, 'r') as file:
         return json.load(file)
 
+def inject_image_to_workflow(prompt, init_image_path):
+    """
+    Inject init_image into workflow for image-to-image generation.
+    Modifies workflow to use input image as initial latent instead of empty latent.
+    
+    This function dynamically searches for nodes by their class_type:
+    - Finds KSampler node (needs latent_image input)
+    - Finds VAELoader node (provides VAE for encoding/decoding)
+    - Finds EmptySD3LatentImage or EmptyLatentImage node (to be replaced)
+    
+    Strategy:
+    1. Dynamically locate required nodes by class_type
+    2. Create LoadImage node to load init_image
+    3. Create VAEEncode node to encode image to latent
+    4. Connect LoadImage -> VAEEncode -> KSampler (replacing EmptyLatentImage connection)
+    """
+    logger.info(f"Injecting init_image into workflow: {init_image_path}")
+    
+    # Find key nodes by class_type
+    ksampler_node_id = None
+    vae_loader_node_id = None
+    empty_latent_node_id = None
+    
+    # Search for nodes by class_type
+    for node_id, node_data in prompt.items():
+        if not isinstance(node_data, dict):
+            continue
+            
+        class_type = node_data.get("class_type", "")
+        
+        if class_type == "KSampler":
+            ksampler_node_id = node_id
+        elif class_type == "VAELoader":
+            vae_loader_node_id = node_id
+        elif class_type in ["EmptySD3LatentImage", "EmptyLatentImage"]:
+            empty_latent_node_id = node_id
+    
+    if not ksampler_node_id:
+        logger.error("KSampler node not found - cannot inject image")
+        return prompt
+    
+    if not vae_loader_node_id:
+        logger.error("VAELoader node not found - cannot encode image")
+        return prompt
+    
+    # Generate unique node IDs for new nodes
+    new_node_id_base = str(uuid.uuid4())[:8]
+    
+    # Create LoadImage node
+    load_image_node_id = f"load_img_{new_node_id_base}"
+    prompt[load_image_node_id] = {
+        "class_type": "LoadImage",
+        "inputs": {
+            "image": init_image_path
+        }
+    }
+    logger.info(f"✅ Created LoadImage node: {load_image_node_id}")
+    
+    # Create VAEEncode node
+    vae_encode_node_id = f"vae_encode_{new_node_id_base}"
+    prompt[vae_encode_node_id] = {
+        "class_type": "VAEEncode",
+        "inputs": {
+            "pixels": [load_image_node_id, 0],  # Connect to LoadImage output
+            "vae": [vae_loader_node_id, 0]      # Connect to VAELoader output
+        }
+    }
+    logger.info(f"✅ Created VAEEncode node: {vae_encode_node_id}")
+    
+    # Replace EmptySD3LatentImage connection with VAEEncode output in KSampler
+    # KSampler's latent_image input currently points to EmptySD3LatentImage (node 27)
+    # We'll replace it with our encoded image
+    prompt[ksampler_node_id]["inputs"]["latent_image"] = [vae_encode_node_id, 0]
+    logger.info(f"✅ Connected VAEEncode to KSampler ({ksampler_node_id})")
+    
+    if empty_latent_node_id:
+        logger.info(f"ℹ️ Replaced {prompt[empty_latent_node_id].get('class_type', 'EmptyLatent')} ({empty_latent_node_id}) with encoded image")
+    
+    logger.info("✅ Image-to-image workflow configured successfully")
+    return prompt
+
 def handler(job):
     job_input = job.get("input", {})
 
     logger.info(f"Received job input: {job_input}")
+
+    # ✅ NEW: Process init_image for image-to-image generation
+    init_image_path = None
+    if "init_image" in job_input:
+        temp_dir = "/tmp"
+        # Use unique filename to avoid race conditions in concurrent jobs
+        unique_filename = f"init_image_{uuid.uuid4().hex[:8]}.png"
+        init_image_path = save_data_if_base64(
+            job_input["init_image"], 
+            temp_dir, 
+            unique_filename
+        )
+        logger.info(f"✅ Saved init_image to: {init_image_path}")
+        if not os.path.exists(init_image_path):
+            logger.error(f"❌ Failed to save init_image to {init_image_path}")
+            init_image_path = None
+        else:
+            logger.info(f"🖼️ Image-to-image mode enabled")
 
     # LoRA 개수에 따라 적절한 워크플로우 파일 선택
     lora_list = job_input.get("lora", [])
@@ -159,6 +258,10 @@ def handler(job):
                 prompt[node_id]["inputs"]["strength_clip"] = weight
                 logger.info(f"LoRA {i+1} applied: {lora_name} with weight {weight}")
     
+    # ✅ NEW: Inject init_image into workflow for image-to-image
+    if init_image_path:
+        prompt = inject_image_to_workflow(prompt, init_image_path)
+        logger.info("✅ Image-to-image workflow configured")
 
     ws_url = f"ws://{server_address}:8188/ws?clientId={client_id}"
     logger.info(f"Connecting to WebSocket: {ws_url}")
@@ -179,13 +282,13 @@ def handler(job):
             logger.warning(f"HTTP 연결 실패 (시도 {http_attempt+1}/{max_http_attempts}): {e}")
             if http_attempt == max_http_attempts - 1:
                 raise Exception("ComfyUI 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.")
+            import time
             time.sleep(1)
     
     ws = websocket.WebSocket()
     # 웹소켓 연결 시도 (최대 3분)
     max_attempts = int(180/5)  # 3분 (1초에 한 번씩 시도)
     for attempt in range(max_attempts):
-        import time
         try:
             ws.connect(ws_url)
             logger.info(f"웹소켓 연결 성공 (시도 {attempt+1})")
