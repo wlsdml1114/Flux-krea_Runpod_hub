@@ -148,8 +148,7 @@ def inject_image_to_workflow(prompt, init_image_path):
         return prompt
     
     # Generate unique node IDs for new nodes
-    import uuid as uuid_module
-    new_node_id_base = str(uuid_module.uuid4())[:8]
+    new_node_id_base = str(uuid.uuid4())[:8]
     
     # Create LoadImage node
     load_image_node_id = f"load_img_{new_node_id_base}"
